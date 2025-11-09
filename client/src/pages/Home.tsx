@@ -4,17 +4,19 @@ import Header from "@/components/Header";
 
 export default function Home() {
   const handleNumberInfo = async (phoneNumber: string) => {
-    const response = await fetch(`https://numapi.anshapi.workers.dev/?num=${phoneNumber}`);
+    const response = await fetch(`/api/number-info/${phoneNumber}`);
     if (!response.ok) {
-      throw new Error("Failed to fetch phone number information");
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch phone number information");
     }
     return await response.json();
   };
 
   const handleFamilyDetail = async (aadhaar: string) => {
-    const response = await fetch(`https://addartofamily.vercel.app/fetch?aadhaar=${aadhaar}&key=fxt`);
+    const response = await fetch(`/api/family-detail/${aadhaar}`);
     if (!response.ok) {
-      throw new Error("Failed to fetch family details");
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch family details");
     }
     return await response.json();
   };
