@@ -1,6 +1,7 @@
-import { Phone, Users, Send, Instagram, Wallet } from "lucide-react";
+import { Phone, Users, Send, Instagram, Wallet, Shield, Lock } from "lucide-react";
 import InfoSection from "@/components/InfoSection";
 import Header from "@/components/Header";
+import MatrixRain from "@/components/MatrixRain";
 
 export default function Home() {
   const handleNumberInfo = async (phoneNumber: string) => {
@@ -22,20 +23,33 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background scanline-effect">
+    <div className="min-h-screen bg-background scanline-effect cyber-grid relative">
+      <MatrixRain />
       <Header />
       
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8 text-center">
-          <h2 className="text-3xl font-bold mb-2" style={{ textShadow: '0 0 10px hsl(120 100% 50% / 0.3)' }}>
-            INFORMATION LOOKUP SYSTEM
+      <main className="container mx-auto px-4 py-12 relative z-10">
+        <div className="mb-12 text-center relative">
+          <div className="inline-flex items-center gap-3 mb-4">
+            <Shield className="w-8 h-8 text-cyan-400 animate-pulse" />
+            <Lock className="w-6 h-6 text-primary" />
+          </div>
+          <h2 className="text-4xl md:text-5xl font-bold mb-4 text-cyber font-mono tracking-wider" style={{ textShadow: '0 0 20px hsl(120 100% 50% / 0.5), 0 0 40px hsl(180 100% 50% / 0.3)' }}>
+            INFORMATION_LOOKUP_SYSTEM
           </h2>
-          <p className="text-muted-foreground">
-            Secure data retrieval interface // Access restricted information
+          <div className="flex items-center justify-center gap-2 text-cyan-400/70 font-mono text-sm mb-2">
+            <span className="animate-pulse">[</span>
+            <span>SECURE_DATA_RETRIEVAL_INTERFACE</span>
+            <span className="animate-pulse">]</span>
+          </div>
+          <p className="text-muted-foreground font-mono text-xs">
+            &gt; Access_Level: AUTHORIZED // Session_Active: TRUE
           </p>
+          <div className="mt-6 h-px w-64 mx-auto bg-gradient-to-r from-transparent via-primary to-transparent" style={{
+            boxShadow: '0 0 10px rgba(0, 255, 0, 0.5)'
+          }}></div>
         </div>
 
-        <div className="max-w-4xl mx-auto space-y-4">
+        <div className="max-w-4xl mx-auto space-y-6">
           <InfoSection
             icon={Phone}
             title="Number Info"
@@ -86,9 +100,24 @@ export default function Home() {
           />
         </div>
 
-        <footer className="mt-12 text-center text-xs text-muted-foreground">
-          <p>© 2024 RanaxHack Info App // Authorized access only</p>
-          <p className="mt-1">All queries are logged and monitored</p>
+        <footer className="mt-16 text-center text-xs text-muted-foreground font-mono">
+          <div className="mb-4 h-px w-full max-w-md mx-auto bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+          <div className="space-y-2">
+            <p className="flex items-center justify-center gap-2">
+              <span className="text-primary">©</span> 
+              <span>2024_RANAXHACK_INFO_APP</span>
+              <span className="text-primary">//</span>
+              <span className="text-cyan-400/50">AUTHORIZED_ACCESS_ONLY</span>
+            </p>
+            <p className="text-destructive/70 text-[10px] tracking-widest">
+              [ ! ] ALL_QUERIES_LOGGED_AND_MONITORED [ ! ]
+            </p>
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <div className="h-1 w-1 rounded-full bg-primary animate-pulse"></div>
+              <div className="h-1 w-1 rounded-full bg-cyan-400 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+              <div className="h-1 w-1 rounded-full bg-primary animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+            </div>
+          </div>
         </footer>
       </main>
     </div>
