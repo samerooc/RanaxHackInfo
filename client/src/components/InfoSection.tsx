@@ -3,8 +3,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronDown, ChevronUp, LucideIcon, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, LucideIcon, Loader2, Copy, Download } from "lucide-react";
 import JsonViewer from "./JsonViewer";
+import { useToast } from "@/components/ui/use-toast";
 
 interface InfoSectionProps {
   icon: LucideIcon;
@@ -31,13 +32,46 @@ export default function InfoSection({
 }: InfoSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const [responseData, setResponseData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [result, setResult] = useState<any>(null);
+  const { toast } = useToast();
+
+  const formatDataAsText = (data: any): string => {
+    if (!data) return "";
+    return JSON.stringify(data, null, 2);
+  };
+
+  const handleCopy = () => {
+    const textData = formatDataAsText(responseData);
+    navigator.clipboard.writeText(textData).then(() => {
+      toast({
+        title: "Copied!",
+        description: "Data copied to clipboard",
+      });
+    });
+  };
+
+  const handleDownload = () => {
+    const textData = formatDataAsText(responseData);
+    const blob = new Blob([textData], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${title.toLowerCase().replace(/\s+/g, "-")}-data.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({
+      title: "Downloaded!",
+      description: "Data downloaded successfully",
+    });
+  };
 
   const handleSubmit = async () => {
     setError("");
-    setResult(null);
+    setResponseData(null);
 
     if (validationPattern && !validationPattern.test(inputValue)) {
       setError(validationMessage);
@@ -57,7 +91,7 @@ export default function InfoSection({
     setIsLoading(true);
     try {
       const response = await onSubmit(inputValue);
-      setResult(response);
+      setResponseData(response);
     } catch (err: any) {
       setError(err.message || "Failed to fetch data. Please try again.");
     } finally {
@@ -165,19 +199,34 @@ export default function InfoSection({
             </div>
           )}
 
-          {result && (
-            <div className="space-y-3">
-              <Label className="text-cyan-400 font-mono text-sm tracking-wider flex items-center gap-2">
-                <span className="text-primary">&gt;&gt;</span> SYSTEM_RESPONSE:
-              </Label>
-              <div
-                className="p-5 rounded-md bg-black/70 border-2 border-primary/40 max-h-96 overflow-auto relative"
-                data-testid={`result-${title.toLowerCase().replace(/\s+/g, '-')}`}
-                style={{
-                  boxShadow: '0 0 20px rgba(0, 255, 0, 0.15), inset 0 0 20px rgba(0, 255, 0, 0.05)'
-                }}
-              >
-                <JsonViewer data={result} />
+          {responseData && (
+            <div className="mt-4 space-y-3">
+              <div className="flex gap-2 justify-end">
+                <Button
+                  onClick={handleCopy}
+                  variant="outline"
+                  size="sm"
+                  className="font-mono"
+                  data-testid="button-copy"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  COPY
+                </Button>
+                <Button
+                  onClick={handleDownload}
+                  variant="outline"
+                  size="sm"
+                  className="font-mono"
+                  data-testid="button-download"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  DOWNLOAD
+                </Button>
+              </div>
+              <div className="p-4 rounded-md bg-black/70 border-2 border-primary/40 font-mono text-xs overflow-x-auto max-h-96 overflow-y-auto">
+                <pre className="text-green-400 whitespace-pre-wrap break-words">
+                  {formatDataAsText(responseData)}
+                </pre>
               </div>
             </div>
           )}
