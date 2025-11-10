@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import Home from "@/pages/Home";
 import KeyVerification from "@/pages/KeyVerification";
+import AdminPage from "@/pages/admin";
 
 function App() {
+  const [location, setLocation] = useLocation();
   const [accessKey, setAccessKey] = useState<string | null>(null);
   const [keyType, setKeyType] = useState<string>("");
   const [isVerifying, setIsVerifying] = useState(true);
@@ -56,6 +60,7 @@ function App() {
     localStorage.removeItem("ranaxhack_key_type");
     setAccessKey(null);
     setKeyType("");
+    setLocation("/");
   };
 
   if (isVerifying) {
@@ -76,11 +81,40 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        {!accessKey ? (
-          <KeyVerification onVerified={handleVerified} />
-        ) : (
-          <Home accessKey={accessKey} onLogout={handleLogout} />
-        )}
+        <div className="min-h-screen bg-background">
+          {accessKey && location !== "/" && (
+            <nav className="border-b px-4 py-2 flex items-center justify-between">
+              <div className="flex gap-2">
+                <Button variant="ghost" onClick={() => setLocation("/")} data-testid="button-nav-home">
+                  Home
+                </Button>
+                <Button variant="ghost" onClick={() => setLocation("/admin")} data-testid="button-nav-admin">
+                  Admin
+                </Button>
+              </div>
+              <Button variant="outline" onClick={handleLogout} data-testid="button-logout">
+                Logout
+              </Button>
+            </nav>
+          )}
+          
+          <Switch>
+            <Route path="/admin">
+              {!accessKey ? (
+                <KeyVerification onVerified={handleVerified} />
+              ) : (
+                <AdminPage />
+              )}
+            </Route>
+            <Route path="/">
+              {!accessKey ? (
+                <KeyVerification onVerified={handleVerified} />
+              ) : (
+                <Home accessKey={accessKey} onLogout={handleLogout} />
+              )}
+            </Route>
+          </Switch>
+        </div>
       </TooltipProvider>
     </QueryClientProvider>
   );

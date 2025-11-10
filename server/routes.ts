@@ -146,6 +146,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid phone number format. Must be 10 digits." });
       }
 
+      // Track search history
+      await storage.createSearchHistory({
+        keyId: accessKey.id,
+        searchType: "number",
+        searchQuery: phoneNumber,
+      });
+
       const response = await fetch(`https://numapi.anshapi.workers.dev/?num=${phoneNumber}`);
       
       // Forward the actual status code from upstream API
@@ -164,6 +171,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Network or fetch errors
       console.error("Number Info API error:", error);
       res.status(503).json({ error: "Unable to reach external API. Please try again later." });
+    }
+  });
+
+  // Admin: Create new access key
+  app.post("/api/admin/keys/create", async (req, res) => {
+    try {
+      const { type, maxDailySearches, username } = req.body;
+      
+      if (!type) {
+        return res.status(400).json({ error: "Key type is required" });
+      }
+
+      const keyLength = type === "limited_daily" ? 20 : 25;
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let newKey = '';
+      for (let i = 0; i < keyLength; i++) {
+        newKey += chars[Math.floor(Math.random() * chars.length)];
+      }
+
+      const accessKey = await storage.createAccessKey({
+        key: newKey,
+        type,
+        maxDailySearches: maxDailySearches ?? (type === "limited_daily" ? 10 : null),
+        username: username ?? null,
+      });
+
+      res.json({ success: true, key: accessKey });
+    } catch (error: any) {
+      console.error("Failed to create key:", error);
+      res.status(500).json({ error: "Failed to create key" });
+    }
+  });
+
+  // Admin: Update access key
+  app.put("/api/admin/keys/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { maxDailySearches, username, isActive } = req.body;
+
+      const updates: Partial<any> = {};
+      if (maxDailySearches !== undefined) updates.maxDailySearches = maxDailySearches;
+      if (username !== undefined) updates.username = username;
+      if (isActive !== undefined) updates.isActive = isActive;
+
+      await storage.updateAccessKey(id, updates);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Failed to update key:", error);
+      res.status(500).json({ error: "Failed to update key" });
+    }
+  });
+
+  // Admin: Delete access key
+  app.delete("/api/admin/keys/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteAccessKey(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Failed to delete key:", error);
+      res.status(500).json({ error: "Failed to delete key" });
+    }
+  });
+
+  // Admin: Get all keys with usage stats
+  app.get("/api/admin/keys/detailed", async (req, res) => {
+    try {
+      const allKeys = await storage.getAllAccessKeys();
+      const today = new Date().toISOString().split('T')[0];
+      
+      const keysWithUsage = await Promise.all(
+        allKeys.map(async (key) => {
+          const usage = await storage.getKeyUsage(key.id, today);
+          const searchHistory = await storage.getSearchHistoryByKeyId(key.id);
+          
+          return {
+            ...key,
+            todayUsage: usage?.searchCount || 0,
+            remaining: key.type === "limited_daily" 
+              ? (key.maxDailySearches || 10) - (usage?.searchCount || 0)
+              : null,
+            totalSearches: searchHistory.length,
+          };
+        })
+      );
+
+      res.json({ success: true, keys: keysWithUsage });
+    } catch (error: any) {
+      console.error("Failed to fetch detailed keys:", error);
+      res.status(500).json({ error: "Failed to fetch keys" });
+    }
+  });
+
+  // Admin: Get search history
+  app.get("/api/admin/search-history", async (req, res) => {
+    try {
+      const allHistory = await storage.getAllSearchHistory();
+      const allKeys = await storage.getAllAccessKeys();
+      
+      const historyWithDetails = allHistory.map((history) => {
+        const key = allKeys.find(k => k.id === history.keyId);
+        return {
+          ...history,
+          keyValue: key?.key,
+          username: key?.username,
+          keyType: key?.type,
+        };
+      });
+
+      res.json({ success: true, history: historyWithDetails });
+    } catch (error: any) {
+      console.error("Failed to fetch search history:", error);
+      res.status(500).json({ error: "Failed to fetch search history" });
     }
   });
 
@@ -212,6 +332,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!/^\d{12}$/.test(aadhaar)) {
         return res.status(400).json({ error: "Invalid Aadhaar format. Must be 12 digits." });
       }
+
+      // Track search history
+      await storage.createSearchHistory({
+        keyId: accessKey.id,
+        searchType: "aadhaar",
+        searchQuery: aadhaar,
+      });
 
       const response = await fetch(`https://addartofamily.vercel.app/fetch?aadhaar=${aadhaar}&key=fxt`);
       

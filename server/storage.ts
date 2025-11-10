@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type AccessKey, type InsertAccessKey, type KeyUsage, type InsertKeyUsage } from "@shared/schema";
+import { type User, type InsertUser, type AccessKey, type InsertAccessKey, type KeyUsage, type InsertKeyUsage, type SearchHistory, type InsertSearchHistory } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -7,23 +7,32 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   
   getAccessKeyByKey(key: string): Promise<AccessKey | undefined>;
+  getAccessKeyById(id: string): Promise<AccessKey | undefined>;
   createAccessKey(key: InsertAccessKey): Promise<AccessKey>;
+  updateAccessKey(id: string, updates: Partial<AccessKey>): Promise<void>;
+  deleteAccessKey(id: string): Promise<void>;
   getAllAccessKeys(): Promise<AccessKey[]>;
   
   getKeyUsage(keyId: string, date: string): Promise<KeyUsage | undefined>;
   createKeyUsage(usage: InsertKeyUsage): Promise<KeyUsage>;
   updateKeyUsageCount(keyId: string, date: string, count: number): Promise<void>;
+  
+  createSearchHistory(history: InsertSearchHistory): Promise<SearchHistory>;
+  getSearchHistoryByKeyId(keyId: string): Promise<SearchHistory[]>;
+  getAllSearchHistory(): Promise<SearchHistory[]>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private accessKeys: Map<string, AccessKey>;
   private keyUsages: Map<string, KeyUsage>;
+  private searchHistories: Map<string, SearchHistory>;
 
   constructor() {
     this.users = new Map();
     this.accessKeys = new Map();
     this.keyUsages = new Map();
+    this.searchHistories = new Map();
     this.initializeKeys();
   }
 
@@ -43,6 +52,7 @@ export class MemStorage implements IStorage {
       key: this.generateRandomKey(25),
       type: "unlimited",
       maxDailySearches: null,
+      username: null,
       isActive: true,
       createdAt: new Date(),
     };
@@ -53,6 +63,7 @@ export class MemStorage implements IStorage {
       key: this.generateRandomKey(25),
       type: "permanent",
       maxDailySearches: null,
+      username: null,
       isActive: true,
       createdAt: new Date(),
     };
@@ -64,6 +75,7 @@ export class MemStorage implements IStorage {
         key: this.generateRandomKey(20),
         type: "limited_daily",
         maxDailySearches: 10,
+        username: null,
         isActive: true,
         createdAt: new Date(),
       };
@@ -92,6 +104,10 @@ export class MemStorage implements IStorage {
     return this.accessKeys.get(key);
   }
 
+  async getAccessKeyById(id: string): Promise<AccessKey | undefined> {
+    return Array.from(this.accessKeys.values()).find((key) => key.id === id);
+  }
+
   async createAccessKey(insertKey: InsertAccessKey): Promise<AccessKey> {
     const id = randomUUID();
     const accessKey: AccessKey = {
@@ -99,11 +115,28 @@ export class MemStorage implements IStorage {
       key: insertKey.key,
       type: insertKey.type,
       maxDailySearches: insertKey.maxDailySearches ?? null,
+      username: insertKey.username ?? null,
       isActive: true,
       createdAt: new Date(),
     };
     this.accessKeys.set(accessKey.key, accessKey);
     return accessKey;
+  }
+
+  async updateAccessKey(id: string, updates: Partial<AccessKey>): Promise<void> {
+    const key = await this.getAccessKeyById(id);
+    if (key) {
+      const updated = { ...key, ...updates };
+      this.accessKeys.delete(key.key);
+      this.accessKeys.set(updated.key, updated);
+    }
+  }
+
+  async deleteAccessKey(id: string): Promise<void> {
+    const key = await this.getAccessKeyById(id);
+    if (key) {
+      this.accessKeys.delete(key.key);
+    }
   }
 
   async getAllAccessKeys(): Promise<AccessKey[]> {
@@ -134,6 +167,29 @@ export class MemStorage implements IStorage {
     if (existing) {
       this.keyUsages.set(usageKey, { ...existing, searchCount: count });
     }
+  }
+
+  async createSearchHistory(insertHistory: InsertSearchHistory): Promise<SearchHistory> {
+    const id = randomUUID();
+    const history: SearchHistory = {
+      id,
+      keyId: insertHistory.keyId,
+      searchType: insertHistory.searchType,
+      searchQuery: insertHistory.searchQuery,
+      timestamp: new Date(),
+    };
+    this.searchHistories.set(id, history);
+    return history;
+  }
+
+  async getSearchHistoryByKeyId(keyId: string): Promise<SearchHistory[]> {
+    return Array.from(this.searchHistories.values()).filter(
+      (h) => h.keyId === keyId
+    );
+  }
+
+  async getAllSearchHistory(): Promise<SearchHistory[]> {
+    return Array.from(this.searchHistories.values());
   }
 }
 
