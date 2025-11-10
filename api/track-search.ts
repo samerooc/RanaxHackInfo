@@ -1,5 +1,26 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import { Pool } from '@neondatabase/serverless';
+import { eq, and } from 'drizzle-orm';
+import { pgTable, text, varchar, integer, boolean, timestamp, date } from 'drizzle-orm/pg-core';
+import { sql as drizzleSql } from 'drizzle-orm';
+
+const accessKeys = pgTable("access_keys", {
+  id: varchar("id").primaryKey().default(drizzleSql`gen_random_uuid()`),
+  key: text("key").notNull().unique(),
+  type: text("type").notNull(),
+  maxDailySearches: integer("max_daily_searches"),
+  username: text("username"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+const keyUsage = pgTable("key_usage", {
+  id: varchar("id").primaryKey().default(drizzleSql`gen_random_uuid()`),
+  keyId: varchar("key_id").notNull(),
+  searchDate: date("search_date").notNull(),
+  searchCount: integer("search_count").notNull().default(0),
+});
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -17,41 +38,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: "Database not configured" });
     }
 
-    const sql = neon(process.env.DATABASE_URL);
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
     
-    const accessKeys = await sql`
-      SELECT * FROM access_keys WHERE key = ${key} LIMIT 1
-    `;
+    const results = await db.select().from(accessKeys)
+      .where(eq(accessKeys.key, key))
+      .limit(1);
     
-    if (accessKeys.length === 0) {
+    if (results.length === 0) {
+      await pool.end();
       return res.status(401).json({ error: "Invalid access key" });
     }
 
-    const accessKey = accessKeys[0];
+    const accessKey = results[0];
 
     if (accessKey.type === "limited_daily") {
       const today = new Date().toISOString().split('T')[0];
       
-      const usage = await sql`
-        SELECT * FROM key_usage 
-        WHERE key_id = ${accessKey.id} AND search_date = ${today}
-        LIMIT 1
-      `;
+      const usageResults = await db.select().from(keyUsage)
+        .where(and(eq(keyUsage.keyId, accessKey.id), eq(keyUsage.searchDate, today)))
+        .limit(1);
       
-      if (usage.length > 0) {
-        await sql`
-          UPDATE key_usage 
-          SET search_count = ${usage[0].search_count + 1}
-          WHERE key_id = ${accessKey.id} AND search_date = ${today}
-        `;
+      if (usageResults.length > 0) {
+        await db.update(keyUsage)
+          .set({ searchCount: usageResults[0].searchCount + 1 })
+          .where(and(eq(keyUsage.keyId, accessKey.id), eq(keyUsage.searchDate, today)));
       } else {
-        await sql`
-          INSERT INTO key_usage (key_id, search_date, search_count)
-          VALUES (${accessKey.id}, ${today}, 1)
-        `;
+        await db.insert(keyUsage).values({
+          keyId: accessKey.id,
+          searchDate: today,
+          searchCount: 1,
+        });
       }
     }
 
+    await pool.end();
     res.json({ success: true });
   } catch (error: any) {
     console.error("Track search error:", error);
