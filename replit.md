@@ -82,6 +82,8 @@ Preferred communication style: Simple, everyday language.
 - Vite bundles the client application with code splitting
 - Development mode runs tsx for server with hot reload
 - Production serves static files from `dist/public`
+- Vercel deployment support with serverless API functions in `/api` directory
+- Vercel configuration in `vercel.json` with proper rewrites and output settings
 
 **Replit-Specific Integrations:**
 - Vite plugins for runtime error overlay
@@ -100,3 +102,19 @@ Preferred communication style: Simple, everyday language.
 - PostCSS with Tailwind and Autoprefixer
 - Path aliases configured: @/ for client src, @shared/ for shared code
 - ESM module system throughout
+
+## Deployment Options
+
+### Replit Deployment
+The application is configured to run on Replit with the "Start application" workflow that runs `npm run dev` on port 5000.
+
+### Vercel Deployment
+The application is ready for Vercel deployment with:
+- **Configuration:** `vercel.json` for build and routing settings
+- **Serverless API Functions:** 
+  - `/api/number-info/[phoneNumber].ts` - Phone number lookup
+  - `/api/family-detail/[aadhaar].ts` - Aadhaar lookup
+- **Build Output:** Frontend builds to `dist/public` via Vite
+- **Documentation:** See `VERCEL_DEPLOYMENT.md` for detailed deployment instructions
+
+The serverless functions replicate the Express API routes and maintain the same validation, error handling, and external API integration logic.
