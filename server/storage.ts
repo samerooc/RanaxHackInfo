@@ -193,4 +193,145 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { db } from './db';
+import { eq, and } from 'drizzle-orm';
+import { users, accessKeys, keyUsage, searchHistory } from '@shared/schema';
+import * as bcrypt from 'bcryptjs';
+
+export class DbStorage implements IStorage {
+  private initialized = false;
+
+  async init() {
+    if (this.initialized) return;
+    
+    const existingKeys = await db.select().from(accessKeys);
+    
+    if (existingKeys.length === 0) {
+      const adminPassword = 'admin123';
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
+      
+      await db.insert(users).values({
+        username: 'admin',
+        password: hashedPassword,
+        isAdmin: true,
+      });
+
+      const masterKey: InsertAccessKey = {
+        key: this.generateRandomKey(25),
+        type: "unlimited",
+        maxDailySearches: null,
+        username: "MASTER_KEY",
+      };
+      await db.insert(accessKeys).values(masterKey);
+
+      const permanentKey: InsertAccessKey = {
+        key: this.generateRandomKey(25),
+        type: "permanent",
+        maxDailySearches: null,
+        username: "PERMANENT_KEY",
+      };
+      await db.insert(accessKeys).values(permanentKey);
+
+      const limitedKeys: InsertAccessKey[] = [];
+      for (let i = 1; i <= 100; i++) {
+        limitedKeys.push({
+          key: this.generateRandomKey(20),
+          type: "limited_daily",
+          maxDailySearches: 10,
+          username: null,
+        });
+      }
+      await db.insert(accessKeys).values(limitedKeys);
+    }
+    
+    this.initialized = true;
+  }
+
+  private generateRandomKey(length: number): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let key = '';
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * chars.length);
+      key += chars[randomIndex];
+    }
+    return key;
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+    return result[0];
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(insertUser).returning();
+    return result[0];
+  }
+
+  async getAccessKeyByKey(key: string): Promise<AccessKey | undefined> {
+    const result = await db.select().from(accessKeys).where(eq(accessKeys.key, key)).limit(1);
+    return result[0];
+  }
+
+  async getAccessKeyById(id: string): Promise<AccessKey | undefined> {
+    const result = await db.select().from(accessKeys).where(eq(accessKeys.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createAccessKey(insertKey: InsertAccessKey): Promise<AccessKey> {
+    const result = await db.insert(accessKeys).values(insertKey).returning();
+    return result[0];
+  }
+
+  async updateAccessKey(id: string, updates: Partial<AccessKey>): Promise<void> {
+    await db.update(accessKeys).set(updates).where(eq(accessKeys.id, id));
+  }
+
+  async deleteAccessKey(id: string): Promise<void> {
+    await db.delete(accessKeys).where(eq(accessKeys.id, id));
+  }
+
+  async getAllAccessKeys(): Promise<AccessKey[]> {
+    return db.select().from(accessKeys);
+  }
+
+  async getKeyUsage(keyId: string, date: string): Promise<KeyUsage | undefined> {
+    const result = await db.select().from(keyUsage)
+      .where(and(eq(keyUsage.keyId, keyId), eq(keyUsage.searchDate, date)))
+      .limit(1);
+    return result[0];
+  }
+
+  async createKeyUsage(insertUsage: InsertKeyUsage): Promise<KeyUsage> {
+    const result = await db.insert(keyUsage).values(insertUsage).returning();
+    return result[0];
+  }
+
+  async updateKeyUsageCount(keyId: string, date: string, count: number): Promise<void> {
+    await db.update(keyUsage)
+      .set({ searchCount: count })
+      .where(and(eq(keyUsage.keyId, keyId), eq(keyUsage.searchDate, date)));
+  }
+
+  async createSearchHistory(insertHistory: InsertSearchHistory): Promise<SearchHistory> {
+    const result = await db.insert(searchHistory).values(insertHistory).returning();
+    return result[0];
+  }
+
+  async getSearchHistoryByKeyId(keyId: string): Promise<SearchHistory[]> {
+    return db.select().from(searchHistory).where(eq(searchHistory.keyId, keyId));
+  }
+
+  async getAllSearchHistory(): Promise<SearchHistory[]> {
+    return db.select().from(searchHistory);
+  }
+}
+
+const dbStorage = new DbStorage();
+dbStorage.init().catch(console.error);
+
+export const storage = dbStorage;
