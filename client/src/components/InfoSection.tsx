@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronDown, ChevronUp, LucideIcon, Loader2, Copy, Download } from "lucide-react";
 import JsonViewer from "./JsonViewer";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface InfoSectionProps {
   icon: LucideIcon;
