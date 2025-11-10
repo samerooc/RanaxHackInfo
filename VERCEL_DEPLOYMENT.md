@@ -62,15 +62,26 @@ vercel --prod
 Vercel Dashboard में जाकर Settings > Environment Variables में add करें:
 
 **Required:**
-- `NEXT_PUBLIC_API_URL` - Your Replit backend URL for key validation
-  - Example: `https://ranaxhack.your-username.repl.co`
-  - Used by serverless functions to validate access keys and enforce quotas
+- `DATABASE_URL` - Your PostgreSQL database connection string
+  - Neon/Supabase/Vercel Postgres या कोई भी PostgreSQL database URL
+  - Example: `postgresql://user:password@host:5432/dbname`
+  - **महत्वपूर्ण:** Access key validation के लिए यह ज़रूरी है
   
-**Optional:**
-- कोई भी additional API keys
-- Database URLs (अगर use कर रहे हैं)
+**Setup करने के steps:**
+1. Vercel Dashboard में अपना project खोलें
+2. Settings > Environment Variables में जाएं
+3. `DATABASE_URL` variable add करें
+4. Database connection string paste करें
+5. Production, Preview, और Development सभी में enable करें
+6. Save करें और redeploy करें
 
-**Note:** Vercel serverless functions proxy to your Express backend for key validation and quota management. Make sure your Replit backend is running and accessible.
+**Database के लिए options:**
+- **Neon** (Recommended): https://neon.tech - Free PostgreSQL database
+- **Vercel Postgres**: Direct integration with Vercel
+- **Supabase**: https://supabase.com - Free tier available
+- या कोई भी PostgreSQL database
+
+**Note:** सारे API endpoints अब directly database से connect करते हैं। Replit backend की ज़रूरत नहीं है।
 
 ## Testing Before Deploy
 
