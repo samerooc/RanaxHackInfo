@@ -27,10 +27,20 @@ export class MemStorage implements IStorage {
     this.initializeKeys();
   }
 
+  private generateRandomKey(length: number): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let key = '';
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * chars.length);
+      key += chars[randomIndex];
+    }
+    return key;
+  }
+
   private initializeKeys() {
     const masterKey: AccessKey = {
       id: randomUUID(),
-      key: "MASTER-UNLIMITED-2024",
+      key: this.generateRandomKey(25),
       type: "unlimited",
       maxDailySearches: null,
       isActive: true,
@@ -40,7 +50,7 @@ export class MemStorage implements IStorage {
 
     const permanentKey: AccessKey = {
       id: randomUUID(),
-      key: "PERMANENT-ACCESS-2024",
+      key: this.generateRandomKey(25),
       type: "permanent",
       maxDailySearches: null,
       isActive: true,
@@ -51,7 +61,7 @@ export class MemStorage implements IStorage {
     for (let i = 1; i <= 100; i++) {
       const limitedKey: AccessKey = {
         id: randomUUID(),
-        key: `LIMITED-${String(i).padStart(3, '0')}-2024`,
+        key: this.generateRandomKey(20),
         type: "limited_daily",
         maxDailySearches: 10,
         isActive: true,

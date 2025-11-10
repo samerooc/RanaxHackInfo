@@ -81,6 +81,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get All Keys API (Admin endpoint)
+  app.get("/api/admin/keys", async (req, res) => {
+    try {
+      const allKeys = await storage.getAllAccessKeys();
+      res.json({ 
+        success: true,
+        keys: allKeys.map(k => ({
+          key: k.key,
+          type: k.type,
+          maxDailySearches: k.maxDailySearches,
+          isActive: k.isActive
+        }))
+      });
+    } catch (error: any) {
+      console.error("Failed to fetch keys:", error);
+      res.status(500).json({ error: "Failed to fetch keys" });
+    }
+  });
+
   // Number Info API - Proxy to external service (Protected)
   app.post("/api/number-info", async (req, res) => {
     try {
