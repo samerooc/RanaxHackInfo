@@ -1,11 +1,21 @@
-import { Phone, Users, Send, Instagram, Wallet, Shield, Lock } from "lucide-react";
+import { Phone, Users, Send, Instagram, Wallet, Shield, Lock, LogOut } from "lucide-react";
 import InfoSection from "@/components/InfoSection";
 import Header from "@/components/Header";
 import MatrixRain from "@/components/MatrixRain";
+import { Button } from "@/components/ui/button";
 
-export default function Home() {
+interface HomeProps {
+  accessKey: string;
+  onLogout: () => void;
+}
+
+export default function Home({ accessKey, onLogout }: HomeProps) {
   const handleNumberInfo = async (phoneNumber: string) => {
-    const response = await fetch(`/api/number-info/${phoneNumber}`);
+    const response = await fetch(`/api/number-info`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phoneNumber, key: accessKey }),
+    });
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error || "Failed to fetch phone number information");
@@ -14,7 +24,11 @@ export default function Home() {
   };
 
   const handleFamilyDetail = async (aadhaar: string) => {
-    const response = await fetch(`/api/family-detail/${aadhaar}`);
+    const response = await fetch(`/api/family-detail`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ aadhaar, key: accessKey }),
+    });
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error || "Failed to fetch family details");
@@ -27,6 +41,19 @@ export default function Home() {
       <MatrixRain />
       <Header />
       
+      <div className="absolute top-4 right-4 z-50">
+        <Button
+          onClick={onLogout}
+          variant="outline"
+          size="sm"
+          className="font-mono gap-2"
+          data-testid="button-logout"
+        >
+          <LogOut className="w-4 h-4" />
+          LOGOUT
+        </Button>
+      </div>
+
       <main className="container mx-auto px-4 py-12 relative z-10">
         <div className="mb-12 text-center relative">
           <div className="inline-flex items-center gap-3 mb-4">

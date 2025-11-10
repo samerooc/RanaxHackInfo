@@ -57,11 +57,20 @@ vercel --prod
 3. **`/api/family-detail/[aadhaar].ts`** - Aadhaar lookup serverless function
 4. **`.vercelignore`** - Files jo deploy में नहीं जाएंगे
 
-## Environment Variables (अगर ज़रूरत हो)
+## Environment Variables (ज़रूरी)
 
 Vercel Dashboard में जाकर Settings > Environment Variables में add करें:
-- कोई भी API keys
+
+**Required:**
+- `NEXT_PUBLIC_API_URL` - Your Replit backend URL for key validation
+  - Example: `https://ranaxhack.your-username.repl.co`
+  - Used by serverless functions to validate access keys and enforce quotas
+  
+**Optional:**
+- कोई भी additional API keys
 - Database URLs (अगर use कर रहे हैं)
+
+**Note:** Vercel serverless functions proxy to your Express backend for key validation and quota management. Make sure your Replit backend is running and accessible.
 
 ## Testing Before Deploy
 
